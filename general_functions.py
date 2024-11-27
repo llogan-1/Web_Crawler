@@ -8,7 +8,7 @@ import os
 def create_project_dir(directory: str):
     project_path = Path(directory)
     if not project_path.exists():
-        print(f'Creating project: {directory}')
+        print(f'Creating project: {directory}\n')
         project_path.mkdir()
 
 #Create queued and crawled files (IF NOT CREATED)
@@ -28,7 +28,7 @@ def write_file(path: Path, data: str):
         with path.open('w') as f:
             f.write(data)
     except IOError as e:
-        print(f"Error writing to {path}: {e}")
+        print(f"Error writing to {path}: {e}\n")
 
 # Add data onto an existing file
 
@@ -37,7 +37,7 @@ def append_to_file(path, data):
         with path.open('a') as f:
             f.write(data + '\n')
     except IOError as e:
-        print(f"Error appending to {path}: {e}")
+        print(f"Error appending to {path}: {e}\n" )
 
 # Delete contents of file
 
@@ -46,7 +46,7 @@ def delete_file_contents(path):
         with path.open('w'):
             pass
     except IOError as e:
-        print(f"Error deleting {path}: {e}")
+        print(f"Error deleting {path}: {e}\n")
 
 # read a file and convert each line to set of items
 
@@ -56,7 +56,7 @@ def file_to_set(file_name):
         with file_name.open('r') as f:
             return {line.strip() for line in f}
     except IOError as e:
-        print(f"Error reading {file_name} to set: {e}")
+        print(f"Error reading {file_name} to set: {e}\n")
 
 #iterate through a set, with each item being on a new linfe of the file
 

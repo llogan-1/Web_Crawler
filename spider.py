@@ -6,6 +6,7 @@ from general_functions import *
 class Spider:
     
     # Class vairables to be shared among all instance of Spider
+    MAX_QUEUE_SIZE = 5000
     project_name = ''
     base_url = ''
     domain_name = ''
@@ -33,8 +34,8 @@ class Spider:
     @staticmethod
     def crawl_page(thread_name, page_url):
         if page_url not in Spider.crawled:
-            print(thread_name + ' now crawling page ' + page_url)
-            print('Queue: ' + str(len(Spider.queue)) + ' | Crawled: '+ str(len(Spider.crawled)))
+            print(thread_name + ' now crawling page ' + page_url + "\n")
+            print('Queue: ' + str(len(Spider.queue)) + ' | Crawled: '+ str(len(Spider.crawled)) + '\n')
             Spider.add_links_to_queue(Spider.gather_links(page_url))
             Spider.queue.remove(page_url)
             Spider.crawled.add(page_url)
