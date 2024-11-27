@@ -14,7 +14,7 @@ CRAWLED_FILE = PROJECT_NAME + '/crawled.txt'
 MAX_QUEUE_SIZE = 100
 NUMBER_OF_THREADS = 1
 queue = Queue(maxsize=MAX_QUEUE_SIZE)
-#initialize crawling
+#initialize spider and tell it what it will be crawling from
 Spider(PROJECT_NAME, HOMEPAGE, DOMAIN_NAME)
 
 
@@ -49,18 +49,24 @@ def create_jobs():
     queued_links = file_to_set(Path(QUEUE_FILE))
     
     for link in queued_links:
-        add_to_queue(link) 
-
+        if queue.qsize() < MAX_QUEUE_SIZE:
+            add_to_queue(link) 
+        else:
+            print("Queue is at maximum capacity. Skipping additional links.\n")
+            break
     queue.join()
-    crawl()
 
 
 
 # Checks if items in Queue, if so, crawl them
 def crawl():
-    queued_links = file_to_set(Path(QUEUE_FILE))
-    if (len(queued_links) > 0):
-        print(str(len(queued_links)) + ' links in the queue' + '\n')
+    while True:
+        queued_links = file_to_set(Path(QUEUE_FILE))
+        if len(queued_links) == 0:
+            print("No more links in the queue.\n")
+            break
+
+        print(f"{len(queued_links)} links in the queue.\n")
         create_jobs()
 
 # Runnable
