@@ -1,75 +1,46 @@
 import threading
 from queue import Queue, Full
 from spider import Spider
-from domain import *
+from domain import get_domain_name
 from general_functions import *
-import time
-
+from pathlib import Path
 
 PROJECT_NAME = 'testproject'
 HOMEPAGE = 'https://en.wikipedia.org/wiki/Main_Page'
 DOMAIN_NAME = get_domain_name(HOMEPAGE)
 QUEUE_FILE = PROJECT_NAME + '/queue.txt'
 CRAWLED_FILE = PROJECT_NAME + '/crawled.txt'
-MAX_QUEUE_SIZE = 100
-NUMBER_OF_THREADS = 1
-queue = Queue(maxsize=MAX_QUEUE_SIZE)
-#initialize spider and tell it what it will be crawling from
-Spider(PROJECT_NAME, HOMEPAGE, DOMAIN_NAME)
+NUMBER_OF_THREADS = 6
+queue = Queue()
 
-
-# Create workers threads (will die when main exits)
 def create_workers():
-    for _ in range(NUMBER_OF_THREADS): # don't need to use a variable so we just use _
+    for _ in range(NUMBER_OF_THREADS):
         t = threading.Thread(target=work)
         t.daemon = True
         t.start()
 
-# Do the next job in the queue
+
 def work():
     while True:
-        url = queue.get()
         try:
+            url = queue.get(block=True, timeout=5)  # Wait for URL
             Spider.crawl_page(threading.current_thread().name, url)
         except Exception as e:
-            print(f"Error crawling {url}: {e} \n")
+            print(f"Error in thread: {e}")
         finally:
             queue.task_done()
 
-# adds link to queue, limits the total queue
-def add_to_queue(url):
-    try:
-        queue.put(url, block=True, timeout=1)  # Wait for 1 second before timing out if the queue is full
-        print(f"Added {url} to the queue")
-    except Full:
-        print(f"Queue is full, waiting to add: {url}\n")
 
-# Each queued link is a new job
-def create_jobs():
-    queued_links = file_to_set(Path(QUEUE_FILE))
-    
-    for link in queued_links:
-        if queue.qsize() < MAX_QUEUE_SIZE:
-            add_to_queue(link) 
-        else:
-            print("Queue is at maximum capacity. Skipping additional links.\n")
-            break
-    queue.join()
-
-
-
-# Checks if items in Queue, if so, crawl them
 def crawl():
     while True:
-        queued_links = file_to_set(Path(QUEUE_FILE))
-        if len(queued_links) == 0:
-            print("No more links in the queue.\n")
+        if queue.empty():
+            print("No more links in queue. Exiting crawl.\\")
             break
+        print(f"Queue size: {queue.qsize()} | Crawled: {len(Spider.crawled)}")
+        queue.join()
 
-        print(f"{len(queued_links)} links in the queue.\n")
-        create_jobs()
 
-# Runnable
 if __name__ == "__main__":
+    Spider(PROJECT_NAME, HOMEPAGE, DOMAIN_NAME, queue)
     create_workers()
     crawl()
