@@ -1,2 +1,0 @@
-Error logging
-Adjust datastructures to be thread safe
