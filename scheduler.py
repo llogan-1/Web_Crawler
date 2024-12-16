@@ -1,6 +1,10 @@
 import heapq
 from threading import Lock
 
+# DONT NEED MULTIPLE QUEUES HERE, LOCKING THE ELEMENTS CREATES A QUEUE WITHIN THE THREADING
+# This class only needs to lock and assign things.
+# Need to change the schedulable_data to a db
+
 class Scheduler:
     def __init__(self):
         self.request_queue = []  # Internal priority queue using heapq
@@ -65,8 +69,8 @@ class Scheduler:
 
     def is_empty(self):
         with self.lock:
-            return len(self.request_queue) == 0
+            return len(self.schedulable_data) == 0
 
     def size(self):
         with self.lock:
-            return len(self.request_queue)
+            return len(self.schedulable_data)

@@ -9,16 +9,20 @@ class Spider:
         self.en = engine
 
 
-    def run(a):
-        print("in run spider")
-        print("test")
+    def run(self, spider_num):
+        print("in run spider\n")
+        print(spider_num)
         i = 1
-        while i <= 10000:
-            print(i)
-            i += 1
-            
+        while True:
+            HTML = Spider.request_work(spider_num) # request string of HTML text
+            Spider.crawl()
+    
+    @staticmethod
+    def crawl():
+        print("crawl over the html text")
 
-    def request_html():
+    @staticmethod
+    def request_work(spider_num : str):
         # Ask engine to be given HTML
         # Engine will give request to scheduler
         print("ask engine for html to parse")
