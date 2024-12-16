@@ -5,4 +5,4 @@ class DupFilter:
     # for scheduler
 
     def __init__():
-        print('duplicatefilter needs to be implemented')
+        print('Removing all duplicates: WIP')
