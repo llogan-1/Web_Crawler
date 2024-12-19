@@ -1,28 +1,67 @@
-import engine
+from bs4 import BeautifulSoup
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from collections import Counter
+import string
+import get_content 
+
 class Spider:
 
-    en = engine
+    en = None
+    r = None
 
     def __init__(self, engine):
         print("Creating Spider")
         self.url = ''
-        self.en = engine
-
+        Spider.en = engine
 
     def run(self, spider_num):
         print("in run spider\n")
         print(spider_num)
-        i = 1
         while True:
             HTML = Spider.request_work(spider_num) # request string of HTML text
-            Spider.crawl()
-    
-    @staticmethod
-    def crawl():
-        print("crawl over the html text")
+            keys_and_links = Spider.crawl(HTML)
+            Spider.exporting_scraped()
+
+    def crawl(html_input : str):
+        print("crawling page")
+        soup = BeautifulSoup(html_input, 'html.parser')
+        
+        # Title of the webpage
+        title = (soup.title.string).replace(" - Wikipedia", "") if soup.title else "No title found"
+
+        # Clean data to analyze
+        catlinks_div = soup.find('div', id='mw-normal-catlinks')
+        content_div = soup.find('div', id='mw-content-text')
+        # Keywords
+        content_text = ""
+        if content_div:
+            paragraphs = content_div.find_all('p')  # Find all <p> tags
+            content_text = " ".join(p.get_text(strip=True) for p in paragraphs)
+        
+        # Get data
+        catlinks = get_content.get_catlinks(catlinks_div)
+        content_links = get_content.get_content_links(content_div)
+
+        # Get keywords
+        keywords_events = get_content.get_keywords_and_events(content_text)
+
+        # Return the scraped data
+        data = {
+            'title' : title,
+            'catlinks': catlinks,
+            'content_links': content_links,
+            'keywords': keywords_events
+        }
+        Spider.export_scraped()
+        return
 
     @staticmethod
+    def export_scraped():
+        print("exporting data")
+        
+    @staticmethod
     def request_work(spider_num : str):
-        # Ask engine to be given HTML
-        # Engine will give request to scheduler
-        print("ask engine for html to parse")
+        HTML = Spider.en.schedule_a_spider(spider_num)
+        return HTML

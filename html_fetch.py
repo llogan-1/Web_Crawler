@@ -1,21 +1,19 @@
+import sys
 import requests
 
-class HTMLFetcher:
-    """
-    Class designated to simply extract all HTML code from a website
-    """
-    def __init__(self):
-        pass # Doesn't need to do anything
+# Set UTF-8 as the default encoding
+sys.stdout.reconfigure(encoding='utf-8')
 
-    def fetch_html(self, url):
+class HTMLFetcher:
+    def __init__(self):
+        pass
+
+    def fetch_html(url: str):
         try:
-            # Request the url for code
             response = requests.get(url)
-            
-            # Check if the request was successful
-            if response.status_code == 200:
-                return response.text
-            else:
-                return f"Error: Unable to fetch the webpage. Status code: {response.status_code}"
+            response.raise_for_status()
+            html_content = response.content.decode(response.apparent_encoding, errors='replace')
+            return html_content
         except Exception as e:
-            return f"An error occurred: {e}"
+            print(f"Error fetching URL: {e}")
+            return ""

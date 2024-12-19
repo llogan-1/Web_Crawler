@@ -43,10 +43,11 @@ class Engine:
         print("Making all spiders")
         
         # Stops program when scheduler has nothing left to give
-        while True:
+        while True: # need a better condition to stop program!
             if self.scheduler.is_empty():
-                break
+                pass
             pass
         
     def schedule_a_spider(self, thread_num : str):
-        self.scheduler.enqueue_request(thread_num)
+        url = self.scheduler.assign_item_to_spider(thread_num)
+        return HTMLFetcher.fetch_html(url)
