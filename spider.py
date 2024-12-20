@@ -20,9 +20,11 @@ class Spider:
         print("in run spider\n")
         print(spider_num)
         while True:
-            HTML = Spider.request_work(spider_num) # request string of HTML text
+            WebData = Spider.request_work(spider_num) # request string of HTML text
+            HTML = WebData[0]
+            url = WebData[1]
             keys_and_links = Spider.crawl(HTML)
-            Spider.exporting_scraped()
+            Spider.en.export_scraped(keys_and_links, url)
 
     def crawl(html_input : str):
         print("crawling page")
@@ -48,19 +50,10 @@ class Spider:
         keywords_events = get_content.get_keywords_and_events(content_text)
 
         # Return the scraped data
-        data = {
-            'title' : title,
-            'catlinks': catlinks,
-            'content_links': content_links,
-            'keywords': keywords_events
-        }
-        Spider.export_scraped()
-        return
+        data = (title, catlinks, content_links, keywords_events)
+        return data
 
-    @staticmethod
-    def export_scraped():
-        print("exporting data")
-        
+
     @staticmethod
     def request_work(spider_num : str):
         HTML = Spider.en.schedule_a_spider(spider_num)

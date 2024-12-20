@@ -7,8 +7,9 @@ from collections import Counter
 
 
 def get_catlinks(catlinks_div):
+    prefix = "https://en.wikipedia.org"
     if catlinks_div:
-        catlinks = [a['href'] for a in catlinks_div.find_all('a', href=True)]
+        catlinks = [prefix + a['href'] for a in catlinks_div.find_all('a', href=True)]
         if catlinks:  # Remove the first item if the list is not empty
             catlinks.pop(0)
     else:
@@ -19,9 +20,10 @@ def get_content_links(content_div):
     # Tokenize and clean the text
     if content_div:
         links = [a['href'] for a in content_div.find_all('a', href=True)]
+        content_links = clean_links(links)
     else:
         links = []
-    return links
+    return content_links
 
 def get_keywords_and_events(text):
     preprocessed_text = preprocess_text_nltk(text)
@@ -53,3 +55,13 @@ def preprocess_text_nltk(text):
         .replace(";", " ")
     )
     return cleaned_text
+
+def clean_links(links):
+    cleaned_links = []
+    for link in links:
+        if link[0] != '/':
+            pass
+        else:
+            if '#' not in link:
+                cleaned_links.append('https://en.wikipedia.org' +link)
+    return cleaned_links
