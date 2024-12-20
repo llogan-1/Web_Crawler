@@ -2,20 +2,15 @@ from scheduler import Scheduler
 from html_fetch import HTMLFetcher
 from spider import Spider
 from threading import Thread
+from threading import Lock
 import sqlite3
 
 class Engine:
 
-    run = None
-    scheduler = None
-    htmlfetcher = None
-    spiders = []
-    scheduler_conn = None
-    crawler_conn = None
-
     def __init__(self, website_info):
         self._instance = self
         self.run = False
+        self.lock = Lock()
         
         # Database connection
         self.scheduler_conn = sqlite3.connect("DataBases/scheduler.db", check_same_thread=False)
@@ -28,23 +23,22 @@ class Engine:
         # Define HTML fetcher
         self.htmlfetcher = HTMLFetcher()
 
-        # Create first spider to scrape main.
+        # Boot
         self._init_crawler_db()
         self.boot()
 
     def boot(self): # self is engine
-        print("booting engine")
         self.run = True
         
         # Starting spider
         main_spider = Spider(self)
-        thread_1 = Thread(target=main_spider.run, args=("thread_1",))
-        thread_1.daemon = True # Spider can be daemon since managespiders keeps program running indefinetly 
-        self.spiders.append(thread_1)
-        thread_1.start()
-        self.manage_spiders(main_spider)
+        for i in range(7):
+            thread = Thread(target=main_spider.run, args=("thread_" + str(i),))
+            thread.daemon = True # Spider can be daemon since managespiders keeps program running indefinetly 
+            thread.start()
+        self.manage_spiders()
 
-    def manage_spiders(self, main_Spider):
+    def manage_spiders(self):
         print("Making all spiders")
         
         # Stops program when scheduler has nothing left to give
@@ -57,7 +51,7 @@ class Engine:
         url = self.scheduler.assign_item_to_spider(thread_num)
         return (HTMLFetcher.fetch_html(url), url)
     
-    def export_scraped(self, data, url):
+    def export_scraped(self, data, url, scheduler_conn, crawler_conn):
         print("Exporting scraped data...")
         # Extract data
         title = data[0]
@@ -73,18 +67,18 @@ class Engine:
 
         # Insert content links into the scheduler database
         try:
-            with self.scheduler_conn:
-                cursor = self.scheduler_conn.cursor()
+            with scheduler_conn:
+                cursor = scheduler_conn.cursor()
                 for link in content_links:
                     cursor.execute('INSERT INTO tasks (url) VALUES (?)', (link,))
             print(f"{len(content_links)} content links added to scheduler DB.")
         except Exception as e:
             print(f"Error inserting content links into scheduler DB: {e}")
-
+            
         # Insert keywords, events, and catlinks into the crawled database
         try:
-            with self.crawler_conn:
-                cursor = self.crawler_conn.cursor()
+            with crawler_conn:
+                cursor = crawler_conn.cursor()
                 # Create or update the entry for the website address
                 cursor.execute('''
                     INSERT INTO crawled (url, keywords, events, catlinks)
@@ -97,8 +91,6 @@ class Engine:
             print("Keywords, events, and catlinks added to crawled DB.")
         except Exception as e:
             print(f"Error inserting data into crawled DB: {e}")
-
-
 
     def _init_crawler_db(self):
         cursor = self.crawler_conn.cursor()

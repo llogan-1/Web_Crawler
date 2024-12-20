@@ -2,9 +2,11 @@ from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from collections import Counter
-import string
+from threading import Lock
 import get_content 
+import sqlite3
+
+nltk.download('stopwords')
 
 class Spider:
 
@@ -14,20 +16,32 @@ class Spider:
     def __init__(self, engine):
         print("Creating Spider")
         self.url = ''
+        self.lock = Lock()
         Spider.en = engine
 
     def run(self, spider_num):
-        print("in run spider\n")
         print(spider_num)
+
+        # Create new connections for each thread
+        scheduler_conn = sqlite3.connect("DataBases/scheduler.db")  # New connection for each thread
+        crawler_conn = sqlite3.connect("DataBases/crawled.db")  # New connection for each thread
+
+
         while True:
+            print(spider_num+'\n')
             WebData = Spider.request_work(spider_num) # request string of HTML text
             HTML = WebData[0]
             url = WebData[1]
             keys_and_links = Spider.crawl(HTML)
-            Spider.en.export_scraped(keys_and_links, url)
+            with self.lock:
+                Spider.en.export_scraped(keys_and_links, url, scheduler_conn, crawler_conn)
+
+            if not Spider.en.run:
+                break
+        scheduler_conn.close()
+        crawler_conn.close()
 
     def crawl(html_input : str):
-        print("crawling page")
         soup = BeautifulSoup(html_input, 'html.parser')
         
         # Title of the webpage

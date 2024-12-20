@@ -15,13 +15,15 @@ def check_db_contents(db_path, table_name):
         rows = cursor.fetchall()
 
         # Print the contents
+        count = 0
         if rows:
-            print(f"Contents of {table_name} in {db_path}:")
+            print(f"\n\n\nContents of {table_name} in {db_path}:\n\n\n")
             for row in rows:
                 print(row)
+                count = count + 1
         else:
             print(f"No data found in {table_name} in {db_path}.")
-
+        print(count)
         # Close the connection
         cursor.close()
         conn.close()
@@ -39,4 +41,4 @@ scheduler_table = "tasks"  # Replace with the actual table name in your schedule
 
 # Check contents of both databases
 check_db_contents(crawled_db_path, crawled_table)
-check_db_contents(scheduler_db_path, scheduler_table)
+#check_db_contents(scheduler_db_path, scheduler_table)

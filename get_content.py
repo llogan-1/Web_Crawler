@@ -4,7 +4,7 @@ from nltk.corpus import stopwords
 from nltk import pos_tag, ne_chunk
 from collections import Counter
 
-
+stop_words = set(stopwords.words("english"))
 
 def get_catlinks(catlinks_div):
     prefix = "https://en.wikipedia.org"
@@ -16,20 +16,26 @@ def get_catlinks(catlinks_div):
         catlinks = []
     return catlinks
 
+import re
+
 def get_content_links(content_div):
     # Tokenize and clean the text
     if content_div:
         links = [a['href'] for a in content_div.find_all('a', href=True)]
         content_links = clean_links(links)
+
+        # Filter links to exclude any that end with a file extension (e.g., .pdf, .jpg, etc.)
+        content_links = [link for link in content_links if not re.search(r'\.\w+$', link)]
     else:
-        links = []
+        content_links = []
+        
     return content_links
+
 
 def get_keywords_and_events(text):
     preprocessed_text = preprocess_text_nltk(text)
     words = word_tokenize(preprocessed_text)
     #Remove stopwords
-    stop_words = set(stopwords.words("english"))
     filtered_words = [word for word in words if word.lower() not in stop_words]
 
     # Extract POS tags
