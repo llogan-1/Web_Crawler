@@ -4,13 +4,19 @@ from spider import Spider
 from threading import Thread
 from threading import Lock
 import sqlite3
+import time
 
 class Engine:
 
-    def __init__(self, website_info):
+    def __init__(self, website_info, mins, filter):
         self._instance = self
+        self.anchor = website_info[1]
         self.run = False
         self.lock = Lock()
+        self.filter = filter
+
+        # Timer
+        self.time_max = time.time() + (mins * 60) # add mins minutes
         
         # Database connection
         self.scheduler_conn = sqlite3.connect("DataBases/scheduler.db", check_same_thread=False)
@@ -33,13 +39,12 @@ class Engine:
         # Starting spider
         main_spider = Spider(self)
         for i in range(7):
-            thread = Thread(target=main_spider.run, args=("thread_" + str(i),))
+            thread = Thread(target=main_spider.run, args=("thread_" + str(i), self.anchor,))
             thread.daemon = True # Spider can be daemon since managespiders keeps program running indefinetly 
             thread.start()
-        self.manage_spiders()
+        self.loop_spiders()
 
-    def manage_spiders(self):
-        print("Making all spiders")
+    def loop_spiders(self):
         
         # Stops program when scheduler has nothing left to give
         while True: # need a better condition to stop program!
