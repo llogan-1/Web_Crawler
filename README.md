@@ -1,4 +1,4 @@
-# Web Crawler
+# Domain Crawler
 
 A simple web crawler designed to scrape websites, limited to a few specified domains.
 
