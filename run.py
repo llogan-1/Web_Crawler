@@ -8,3 +8,5 @@ filter = WikipediaFilter()
 if __name__ == "__main__":
     
     Engine(wikipedia_info, 1, filter)
+
+    print("\nengine fully initalize, program completed.")

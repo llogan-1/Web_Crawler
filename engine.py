@@ -11,9 +11,9 @@ class Engine:
     def __init__(self, website_info, mins, filter):
         self._instance = self
         self.anchor = website_info[1]
-        self.run = False
         self.lock = Lock()
         self.filter = filter
+        self.threads = []
 
         # Timer
         self.time_max = time.time() + (mins * 60) # add mins minutes
@@ -34,23 +34,18 @@ class Engine:
         self.boot()
 
     def boot(self): # self is engine
-        self.run = True
         
-        # Starting spider
+        # Starting spider)s_
         main_spider = Spider(self)
         for i in range(7):
             thread = Thread(target=main_spider.run, args=("thread_" + str(i), self.anchor,))
-            thread.daemon = True # Spider can be daemon since managespiders keeps program running indefinetly 
+            self.threads.append(thread)
+            thread.daemon = True # Spider can be daemon since run_spiders keeps program running indefinetly 
             thread.start()
-        self.loop_spiders()
+        # Once threads can no longer .run, they will all be killed
+        for thread in self.threads:
+            thread.join() 
 
-    def loop_spiders(self):
-        
-        # Stops program when scheduler has nothing left to give
-        while True: # need a better condition to stop program!
-            if self.scheduler.is_empty():
-                pass
-            pass
         
     def schedule_a_spider(self, thread_num : str):
         url = self.scheduler.assign_item_to_spider(thread_num)
