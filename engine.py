@@ -1,6 +1,7 @@
 from scheduler import Scheduler
 from html_fetch import HTMLFetcher
 from spider import Spider
+
 from threading import Thread
 from threading import Lock
 import sqlite3
@@ -8,12 +9,13 @@ import time
 
 class Engine:
 
-    def __init__(self, website_info, mins, filter):
+    def __init__(self, website_info, mins, filter, thread_number):
         self._instance = self
         self.anchor = website_info[1]
         self.lock = Lock()
         self.filter = filter
         self.threads = []
+        self.thread_number = thread_number
 
         # Timer
         self.time_max = time.time() + (mins * 60) # add mins minutes
@@ -37,7 +39,7 @@ class Engine:
         
         # Starting spider)s_
         main_spider = Spider(self)
-        for i in range(7):
+        for i in range(self.thread_number):
             thread = Thread(target=main_spider.run, args=("thread_" + str(i), self.anchor,))
             self.threads.append(thread)
             thread.daemon = True # Spider can be daemon since run_spiders keeps program running indefinetly 

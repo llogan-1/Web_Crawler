@@ -1,5 +1,4 @@
 from threading import Lock
-import sqlite3
 
 class Scheduler:
     def __init__(self, scheduler_conn):
