@@ -1,7 +1,6 @@
 from scheduler import Scheduler
 from html_fetch import HTMLFetcher
 from spider import Spider
-
 from threading import Thread
 from threading import Lock
 import sqlite3
@@ -55,53 +54,97 @@ class Engine:
     
     def export_scraped(self, data, url, scheduler_conn, crawler_conn):
         print("Exporting scraped data...")
-        # Extract data
-        title = data[0]
-        content_links = data[2]
-        catlinks = data[1]
-        events = data[3][1]
-        keywords = data[3][0]
-
-        # Ensure keywords, events, and catlinks are flat lists of strings
-        keywords = [str(item) for item in keywords]  # Convert all items to strings
-        events = [str(item) for item in events]      # Convert all items to strings
-        catlinks = [str(item) for item in catlinks]  # Convert all items to strings
+        # Unpackage data
+        links = data[0]
+        keywords = data[1]
+        keyevents = data[2]
 
         # Insert content links into the scheduler database
         try:
             with scheduler_conn:
                 cursor = scheduler_conn.cursor()
-                for link in content_links:
+                for link in links:
                     cursor.execute('INSERT INTO tasks (url) VALUES (?)', (link,))
-            print(f"{len(content_links)} content links added to scheduler DB.")
+            print(f"{len(links)} content links added to scheduler DB.")
         except Exception as e:
             print(f"Error inserting content links into scheduler DB: {e}")
             
-        # Insert keywords, events, and catlinks into the crawled database
+        # Insert keywords and events into the crawled database
         try:
             with crawler_conn:
                 cursor = crawler_conn.cursor()
-                # Create or update the entry for the website address
-                cursor.execute('''
-                    INSERT INTO crawled (url, keywords, events, catlinks)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(url) DO UPDATE SET
-                        keywords=excluded.keywords,
-                        events=excluded.events,
-                        catlinks=excluded.catlinks
-                ''', (url, ','.join(keywords), ','.join(events), ','.join(catlinks)))
-            print("Keywords, events, and catlinks added to crawled DB.")
+
+                # Insert or retrieve URL ID
+                cursor.execute('INSERT OR IGNORE INTO urls (url) VALUES (?)', (url,))
+                cursor.execute('SELECT id FROM urls WHERE url = ?', (url,))
+                url_id = cursor.fetchone()[0]
+
+                # Clear previous keywords and events for this URL
+                cursor.execute('DELETE FROM keywords WHERE url_id = ?', (url_id,))
+                cursor.execute('DELETE FROM keyevents WHERE url_id = ?', (url_id,))
+
+                # Insert keywords
+                for keyword, count in keywords:
+                    cursor.execute('INSERT INTO keywords (url_id, keyword, count) VALUES (?, ?, ?)', (url_id, keyword, count))
+
+                # Insert keyevents
+                for event, count in keyevents:
+                    cursor.execute('INSERT INTO keyevents (url_id, event, count) VALUES (?, ?, ?)', (url_id, event, count))
+
+            print("Url, keywords, and keyevents added to crawled DB.")
         except Exception as e:
             print(f"Error inserting data into crawled DB: {e}")
 
+    @staticmethod
+    def already_crawled(url : str, crawler_conn):
+        try:
+            cursor = crawler_conn.cursor()
+
+            # SQL query to check if the URL is in the 'urls' table
+            cursor.execute("SELECT 1 FROM urls WHERE url = ?", (url,))
+            result = cursor.fetchone()
+
+            # If result is not None, URL is in the table
+            if result:
+                return True
+            else:
+                return False
+        except sqlite3.Error as e:
+            print(f"SQLite error: {e}")
+            print(url)
+            print(type(url))
+            return False
+
     def _init_crawler_db(self):
         cursor = self.crawler_conn.cursor()
+
+        # URLs table to store unique URLs
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS crawled (
-                url TEXT PRIMARY KEY,
-                keywords TEXT,
-                events TEXT,
-                catlinks TEXT
+            CREATE TABLE IF NOT EXISTS urls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT UNIQUE
+            )
+        ''')
+
+        # Keywords table to store keyword counts linked to URLs
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS keywords (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url_id INTEGER,
+                keyword TEXT,
+                count INTEGER,
+                FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Keyevents table to store event counts linked to URLs
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS keyevents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url_id INTEGER,
+                event TEXT,
+                count INTEGER,
+                FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
             )
         ''')
         self.crawler_conn.commit()
