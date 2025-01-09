@@ -21,7 +21,7 @@ class Scheduler:
                 self.spider_assignments[spider_id] = url
                 cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
                 self.db_conn.commit()
-                return url
+                return str(url)
             else:
                 raise ValueError("No tasks available to assign to the spider.")
 
