@@ -92,11 +92,13 @@ class BaseFilter:
         links = []
 
         soup = BeautifulSoup(content, 'html.parser')
-
+        
         for a in soup.find_all('a', href=True):
             href = a['href']
-            links.append(anchor + href if BaseFilter.is_relative_link(href) else href)
-            if href.startswith(anchor): links.append(href)
+            if href.startswith(anchor):
+                links.append(href)
+            if BaseFilter.is_relative_link(href):
+                links.append(anchor + href)
 
         return links
 
