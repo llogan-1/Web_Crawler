@@ -5,8 +5,10 @@ def drop_tables(scheduler_conn, crawler_conn):
         # Drop the crawled table from the crawled database
         with crawler_conn:
             cursor = crawler_conn.cursor()
-            cursor.execute('''DROP TABLE IF EXISTS crawled;''')
-            print("Table 'crawled' dropped from crawled DB.")
+            cursor.execute('''DROP TABLE IF EXISTS keywords;''')
+            cursor.execute('''DROP TABLE IF EXISTS keyevents;''')
+            cursor.execute('''DROP TABLE IF EXISTS urls;''')
+            print("Tables dropped from crawled DB.")
         
         # Drop the tasks table from the scheduler database
         with scheduler_conn:
