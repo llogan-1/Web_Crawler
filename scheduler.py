@@ -11,7 +11,7 @@ class Scheduler:
 
     # Fetch the next schedulable item (URL) from the database
     def assign_item_to_spider(self, spider_id: str):
-        with self.lock:
+        with self.lock, self.db_conn:
             cursor = self.db_conn.cursor()
             cursor.execute('SELECT id, url FROM tasks ORDER BY id LIMIT 1')
             task = cursor.fetchone()
@@ -20,7 +20,6 @@ class Scheduler:
                 task_id, url = task
                 self.spider_assignments[spider_id] = url
                 cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
-                self.db_conn.commit()
                 return str(url)
             else:
                 raise ValueError("No tasks available to assign to the spider.")
