@@ -1,13 +1,13 @@
 import unittest
 import sys
 import os
+from bs4 import BeautifulSoup
 
 # Add src to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from crawler.filters.base import BaseFilter
 from crawler.filters.wikipedia import WikipediaFilter
-from bs4 import BeautifulSoup
 
 class TestBaseFilter(unittest.TestCase):
     def setUp(self):
@@ -21,18 +21,30 @@ class TestBaseFilter(unittest.TestCase):
 
     def test_preprocess_text_nltk(self):
         text = "Hello (world), [this] is; a test\n"
-        expected = "Hello  world    this  is  a test "
+        expected = "Hello world this is a test"
         self.assertEqual(BaseFilter.preprocess_text_nltk(text), expected)
 
     def test_get_div_text(self):
-        divs = ["<div>part1</div>", "<div>part2</div>"]
-        self.assertEqual(self.filter.get_div_text(divs), "<div>part1</div><div>part2</div>")
+        html1 = "<div>part1 <script>alert(1)</script></div>"
+        html2 = "<div>part2 <style>.css{}</style></div>"
+        soup1 = BeautifulSoup(html1, 'html.parser').div
+        soup2 = BeautifulSoup(html2, 'html.parser').div
+        self.assertEqual(self.filter.get_div_text([soup1, soup2]), "part1 part2")
 
-    def test_get_content_links(self):
-        content = '<a href="/relative">Link 1</a><a href="http://external.com">Link 2</a>'
-        anchor = "http://base.com"
-        links = self.filter.get_content_links(content, anchor)
-        self.assertIn("http://base.com/relative", links)
+    def test_extract_metadata(self):
+        html = '''
+        <html>
+            <head>
+                <meta name="description" content="Test description">
+                <meta name="author" content="Test Author">
+                <time datetime="2023-10-27">October 27</time>
+            </head>
+        </html>
+        '''
+        meta = self.filter.extract_metadata(html)
+        self.assertEqual(meta["description"], "Test description")
+        self.assertEqual(meta["author"], "Test Author")
+        self.assertEqual(meta["date"], "2023-10-27")
 
 class TestWikipediaFilter(unittest.TestCase):
     def setUp(self):
@@ -40,13 +52,15 @@ class TestWikipediaFilter(unittest.TestCase):
 
     def test_get_div_ptext(self):
         html = '<div><p>Paragraph 1.</p><p>Paragraph 2.</p></div>'
-        text = WikipediaFilter.get_div_ptext(html)
+        soup = BeautifulSoup(html, 'html.parser').div
+        text = WikipediaFilter.get_div_ptext(soup)
         self.assertEqual(text, "Paragraph 1. Paragraph 2.")
 
     def test_get_content_links_wikipedia(self):
-        content_div = ['<div><a href="/wiki/Python">Python</a><a href="/wiki/File:Image.jpg">File</a><a href="http://other.com">Other</a></div>']
+        html = '<div><a href="/wiki/Python">Python</a><a href="/wiki/File:Image.jpg">File</a><a href="http://other.com">Other</a></div>'
+        soup = BeautifulSoup(html, 'html.parser').div
         anchor = "https://en.wikipedia.org"
-        links = self.filter.get_content_links(content_div, anchor)
+        links = self.filter.get_content_links(soup, anchor)
         self.assertIn("https://en.wikipedia.org/wiki/Python", links)
         self.assertNotIn("https://en.wikipedia.org/wiki/File:Image.jpg", links)
         self.assertNotIn("http://other.com", links)

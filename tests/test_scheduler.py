@@ -22,31 +22,34 @@ class TestScheduler(unittest.TestCase):
     def test_register_and_assign_schedulable(self):
         """Test that a URL can be registered and then assigned."""
         test_url = "http://example.com"
+        source_url = "http://source.com"
         
-        # Register the URL
-        self.scheduler.register_schedulable(test_url)
+        # Register the URL with a source
+        self.scheduler.register_schedulable(test_url, source_url)
         
         # Assign the item
-        assigned_url = self.scheduler.assign_item_to_spider("spider_1")
+        assigned_url, assigned_source = self.scheduler.assign_item_to_spider("spider_1")
         
-        # Check if the assigned URL is the one we registered
+        # Check if the assigned URL and source are correct
         self.assertEqual(assigned_url, test_url)
+        self.assertEqual(assigned_source, source_url)
 
     def test_assign_to_multiple_spiders(self):
         urls = ["http://1.com", "http://2.com"]
         for url in urls:
             self.scheduler.register_schedulable(url)
         
-        url1 = self.scheduler.assign_item_to_spider("spider_1")
-        url2 = self.scheduler.assign_item_to_spider("spider_2")
+        url1_data = self.scheduler.assign_item_to_spider("spider_1")
+        url2_data = self.scheduler.assign_item_to_spider("spider_2")
         
-        self.assertEqual(url1, "http://1.com")
-        self.assertEqual(url2, "http://2.com")
+        self.assertEqual(url1_data[0], "http://1.com")
+        self.assertEqual(url2_data[0], "http://2.com")
         self.assertEqual(self.scheduler.size(), 0)
 
-    def test_assign_empty_raises_error(self):
-        with self.assertRaises(ValueError):
-            self.scheduler.assign_item_to_spider("spider_1")
+    def test_assign_empty_returns_none_tuple(self):
+        url, source = self.scheduler.assign_item_to_spider("spider_1")
+        self.assertIsNone(url)
+        self.assertIsNone(source)
 
     def test_unregister_schedulable(self):
         url = "http://example.com"

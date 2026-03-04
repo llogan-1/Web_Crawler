@@ -35,6 +35,8 @@ class TestEngine(unittest.TestCase):
         self.assertIsNotNone(cursor.fetchone())
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='keywords'")
         self.assertIsNotNone(cursor.fetchone())
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cookies'")
+        self.assertIsNotNone(cursor.fetchone())
 
     def test_already_crawled(self):
         cursor = self.mock_conn.cursor()
@@ -45,20 +47,33 @@ class TestEngine(unittest.TestCase):
         self.assertFalse(Engine.already_crawled("http://notcrawled.com", self.mock_conn))
 
     def test_export_scraped(self):
-        data = (["http://newlink.com"], [("word", 5)], [("event", 2)])
+        # links, keywords, keyevents, metadata
+        metadata = {"date": "2023-01-01", "author": "John Doe", "description": "Test desc"}
+        data = (["http://newlink.com"], [("word", 5)], [("event", 2)], metadata)
         url = "http://current.com"
+        source_url = "http://source.com"
+        cookies = {"session": "123"}
         
-        self.engine.export_scraped(data, url, self.mock_conn, self.mock_conn)
+        # Updated signature
+        self.engine.export_scraped(data, url, source_url, cookies, self.mock_conn, self.mock_conn)
         
         cursor = self.mock_conn.cursor()
-        cursor.execute("SELECT url FROM tasks WHERE url='http://newlink.com'")
-        self.assertIsNotNone(cursor.fetchone())
+        cursor.execute("SELECT url, source_url FROM tasks WHERE url='http://newlink.com'")
+        task = cursor.fetchone()
+        self.assertIsNotNone(task)
+        self.assertEqual(task[1], url) # current url should be source for new link
         
-        cursor.execute("SELECT id FROM urls WHERE url='http://current.com'")
-        url_id = cursor.fetchone()[0]
+        cursor.execute("SELECT id, publication_date, author FROM urls WHERE url='http://current.com'")
+        row = cursor.fetchone()
+        url_id = row[0]
+        self.assertEqual(row[1], "2023-01-01")
+        self.assertEqual(row[2], "John Doe")
         
         cursor.execute("SELECT keyword, count FROM keywords WHERE url_id=?", (url_id,))
         self.assertEqual(cursor.fetchone(), ("word", 5))
+        
+        cursor.execute("SELECT name, value FROM cookies WHERE url_id=?", (url_id,))
+        self.assertEqual(cursor.fetchone(), ("session", "123"))
 
 if __name__ == "__main__":
     unittest.main()

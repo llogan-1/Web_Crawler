@@ -18,7 +18,7 @@ class TestSpider(unittest.TestCase):
     def test_crawl(self):
         # Mock engine filter
         self.mock_engine.filter.get_divs.return_value = ["<div>content</div>"]
-        self.mock_engine.filter.extract_data.return_value = (["http://link.com"], [("key", 1)], [("event", 1)])
+        self.mock_engine.filter.extract_data.return_value = (["http://link.com"], [("key", 1)], [("event", 1)], {"date": "today"})
         self.mock_engine.anchor = "http://anchor.com"
 
         html = "<html><body><div>content</div></body></html>"
@@ -27,11 +27,13 @@ class TestSpider(unittest.TestCase):
         self.assertEqual(result[0], ["http://link.com"])
         self.assertEqual(result[1], [("key", 1)])
         self.assertEqual(result[2], [("event", 1)])
+        self.assertEqual(result[3], {"date": "today"})
 
     def test_request_work(self):
-        self.mock_engine.schedule_a_spider.return_value = ("<html></html>", "http://url.com")
+        # Returns 4 elements: html, url, source_url, cookies
+        self.mock_engine.schedule_a_spider.return_value = ("<html></html>", "http://url.com", "http://source.com", {"c": "v"})
         result = Spider.request_work("thread_1")
-        self.assertEqual(result, ("<html></html>", "http://url.com"))
+        self.assertEqual(result, ("<html></html>", "http://url.com", "http://source.com", {"c": "v"}))
 
 if __name__ == "__main__":
     unittest.main()
