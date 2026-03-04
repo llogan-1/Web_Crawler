@@ -6,54 +6,59 @@ from bs4 import BeautifulSoup
 class WikipediaFilter(BaseFilter):
 
     def __init__(self):
-        # Inherit BaseFilter 
         super().__init__()
 
-    def get_content_links(self, content_div, anchor):
-        if not content_div or not content_div[0]:  # Simplified validation
-            raise ValueError("content_div is empty or None")
+    def get_content_links(self, content_container, anchor):
+        if not content_container:
+            return []
 
-        soup = BeautifulSoup(content_div[0], 'html.parser')
-        
-        links = [a['href'] for a in soup.find_all('a', href=True)]
+        links = [a['href'] for a in content_container.find_all('a', href=True)]
         cleaned_links = [
             urljoin(anchor, link) for link in links
             if (
                 link.startswith('/wiki/')
+                and ':' not in link
                 and '#' not in link
                 and not re.search(r'\.\w+$', link)
                 and WikipediaFilter.is_utf8_valid(link)
             )
         ]
-        return cleaned_links
+        return list(set(cleaned_links))
 
     
-    # Returns a tuple of lists:  (Links, KeyWords, KeyEvents)
-    def extract_data(self, content_divs, anchor):
-        cleaned_links = self.get_content_links(content_divs, anchor)
-        content_text = self.get_div_ptext(content_divs[0])
+    def extract_data(self, content_containers, anchor, raw_html=None):
+        """
+        Extract links, keywords, events, and metadata specifically for Wikipedia pages.
+        """
+        if not content_containers:
+            return ([], [], [], {"date": None, "author": None, "description": None})
+            
+        main_container = content_containers[0]
+        
+        cleaned_links = self.get_content_links(main_container, anchor)
+        content_text = self.get_div_ptext(main_container)
         keywords_keyevents = self.get_keywords_and_events(content_text)
+        
+        # Use BaseFilter's metadata extraction
+        metadata = self.extract_metadata(raw_html) if raw_html else {"date": None, "author": None, "description": None}
 
-        return (cleaned_links, keywords_keyevents[0], keywords_keyevents[1])
+        return (cleaned_links, keywords_keyevents[0], keywords_keyevents[1], metadata)
     
-    # Accept a single div in the form of a string, and return on the paragraph text
     @staticmethod
-    def get_div_ptext(div):
-        if not div:
+    def get_div_ptext(container):
+        if not container:
             return ""
-        soup = BeautifulSoup(div, 'html.parser')
-        content_text = ""
-        if div:
-            paragraphs = soup.find_all('p')  # Find all <p> tags
-            content_text = " ".join(p.get_text(strip=True) for p in paragraphs)
-        else:
-            print("END CRAWLING PROCESS***")
+            
+        paragraphs = container.find_all('p')
+        content_text = " ".join(p.get_text(strip=True) for p in paragraphs)
         return content_text
 
-    # Assume HTML is not empty and in proper HTML format.
     @staticmethod
-    def get_divs(HTML):
-        """Parse and extract content divisions."""
-        soup = BeautifulSoup(HTML, 'html.parser')
-        content_div = [str(soup.find('div', id='mw-content-text'))]
-        return content_div
+    def get_divs(html):
+        if not html:
+            return []
+            
+        soup = BeautifulSoup(html, 'html.parser')
+        content_div = soup.find('div', id='mw-content-text')
+        
+        return [content_div] if content_div else []

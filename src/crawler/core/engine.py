@@ -6,6 +6,7 @@ from threading import Lock
 import sqlite3
 import time
 import os
+import json
 
 class Engine:
 
@@ -29,7 +30,7 @@ class Engine:
 
         # Define scheduler
         self.scheduler = Scheduler(self.scheduler_conn)
-        self.scheduler.register_schedulable(website_info[0]) # First item in the scheduler is set
+        self.scheduler.register_schedulable(website_info[0], None) # First item, no source
 
         # Define HTML fetcher
         self.htmlfetcher = HTMLFetcher()
@@ -53,41 +54,60 @@ class Engine:
 
         
     def schedule_a_spider(self, thread_num : str):
-        url = self.scheduler.assign_item_to_spider(thread_num)
+        url_data = self.scheduler.assign_item_to_spider(thread_num)
+        url, source_url = url_data
         if url:
-            return (HTMLFetcher.fetch_html(url), url)
-        return (None, None)
+            html_cookies = HTMLFetcher.fetch_html(url)
+            html, cookies = html_cookies
+            return (html, url, source_url, cookies)
+        return (None, None, None, None)
     
-    def export_scraped(self, data, url, scheduler_conn, crawler_conn):
-        print("Exporting scraped data...")
-        # Unpackage data
+    def export_scraped(self, data, url, source_url, cookies, scheduler_conn, crawler_conn):
+        print(f"Exporting scraped data for {url}...")
+        # Unpackage data: (links, keywords, keyevents, metadata)
         links = data[0]
         keywords = data[1]
         keyevents = data[2]
+        metadata = data[3]
 
-        # Insert content links into the scheduler database
+        # Insert content links into the scheduler database, passing current url as source_url
         try:
             with scheduler_conn:
                 cursor = scheduler_conn.cursor()
                 for link in links:
-                    cursor.execute('INSERT INTO tasks (url) VALUES (?)', (link,))
+                    cursor.execute('INSERT INTO tasks (url, source_url) VALUES (?, ?)', (link, url))
             print(f"{len(links)} content links added to scheduler DB.")
         except Exception as e:
             print(f"Error inserting content links into scheduler DB: {e}")
             
-        # Insert keywords and events into the crawled database
+        # Insert metadata and cookies into the crawled database
         try:
             with crawler_conn:
                 cursor = crawler_conn.cursor()
 
-                # Insert or retrieve URL ID
-                cursor.execute('INSERT OR IGNORE INTO urls (url) VALUES (?)', (url,))
+                # Insert or retrieve URL ID with new columns
+                cursor.execute('''
+                    INSERT OR IGNORE INTO urls (url, source_url, publication_date, author, description) 
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (url, source_url, metadata.get("date"), metadata.get("author"), metadata.get("description")))
+                
+                # If already exists, update the metadata if it was NULL
+                cursor.execute('''
+                    UPDATE urls SET 
+                        source_url = COALESCE(source_url, ?),
+                        publication_date = COALESCE(publication_date, ?),
+                        author = COALESCE(author, ?),
+                        description = COALESCE(description, ?)
+                    WHERE url = ?
+                ''', (source_url, metadata.get("date"), metadata.get("author"), metadata.get("description"), url))
+
                 cursor.execute('SELECT id FROM urls WHERE url = ?', (url,))
                 url_id = cursor.fetchone()[0]
 
-                # Clear previous keywords and events for this URL
+                # Clear previous keywords, events, and cookies for this URL
                 cursor.execute('DELETE FROM keywords WHERE url_id = ?', (url_id,))
                 cursor.execute('DELETE FROM keyevents WHERE url_id = ?', (url_id,))
+                cursor.execute('DELETE FROM cookies WHERE url_id = ?', (url_id,))
 
                 # Insert keywords
                 for keyword, count in keywords:
@@ -96,8 +116,13 @@ class Engine:
                 # Insert keyevents
                 for event, count in keyevents:
                     cursor.execute('INSERT INTO keyevents (url_id, event, count) VALUES (?, ?, ?)', (url_id, event, count))
+                
+                # Insert cookies
+                if cookies:
+                    for name, value in cookies.items():
+                        cursor.execute('INSERT INTO cookies (url_id, name, value) VALUES (?, ?, ?)', (url_id, name, value))
 
-            print("Url, keywords, and keyevents added to crawled DB.")
+            print("URL details, keywords, keyevents, and cookies added to crawled DB.")
         except Exception as e:
             print(f"Error inserting data into crawled DB: {e}")
 
@@ -117,22 +142,24 @@ class Engine:
                 return False
         except sqlite3.Error as e:
             print(f"SQLite error: {e}")
-            print(url)
-            print(type(url))
             return False
 
     def _init_crawler_db(self):
         cursor = self.crawler_conn.cursor()
 
-        # URLs table to store unique URLs
+        # URLs table updated with new columns
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS urls (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                url TEXT UNIQUE
+                url TEXT UNIQUE,
+                source_url TEXT,
+                publication_date TEXT,
+                author TEXT,
+                description TEXT
             )
         ''')
 
-        # Keywords table to store keyword counts linked to URLs
+        # Keywords table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS keywords (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,7 +170,7 @@ class Engine:
             )
         ''')
 
-        # Keyevents table to store event counts linked to URLs
+        # Keyevents table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS keyevents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,5 +180,17 @@ class Engine:
                 FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
             )
         ''')
+
+        # Cookies table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cookies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url_id INTEGER,
+                name TEXT,
+                value TEXT,
+                FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
+            )
+        ''')
+        
         self.crawler_conn.commit()
         cursor.close()

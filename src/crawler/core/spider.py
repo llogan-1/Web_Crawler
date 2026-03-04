@@ -19,8 +19,8 @@ class Spider:
         os.makedirs("data", exist_ok=True)
 
         # Create new connections for each thread
-        scheduler_conn = sqlite3.connect("data/scheduler.db")  # New connection for each thread
-        crawler_conn = sqlite3.connect("data/crawled.db")  # New connection for each thread
+        scheduler_conn = sqlite3.connect("data/scheduler.db")
+        crawler_conn = sqlite3.connect("data/crawled.db")
 
         while True:
             if time.time() >= Spider.en.time_max:
@@ -29,6 +29,8 @@ class Spider:
             WebData = Spider.request_work(spider_num) # request string of HTML text
             HTML = WebData[0]
             url = WebData[1]
+            source_url = WebData[2]
+            cookies = WebData[3]
 
             if not url:
                 # No tasks available, wait a bit
@@ -38,32 +40,32 @@ class Spider:
             if not HTML or Spider.en.already_crawled(url, crawler_conn):
                 continue
             
-            print(f"{spider_num} processing: {url}")
+            print(f"{spider_num} processing: {url} (from {source_url})")
             data = Spider.crawl(self, HTML, anchor)
             with self.lock:
-                Spider.en.export_scraped(data, url, scheduler_conn, crawler_conn)
+                Spider.en.export_scraped(data, url, source_url, cookies, scheduler_conn, crawler_conn)
 
         scheduler_conn.close()
         crawler_conn.close()
-
-    # Rework crawling and link gathering for generality.
-    # Move soup to filter, use tuples for all possible types of content to find
 
     def crawl(self, html_input : str, anchor : str):
 
         # Collect divs to analyze
         content_divs = Spider.en.filter.get_divs(html_input)
         if not content_divs:
-            print(f"No content divisions found for anchor {anchor}")
-            return ([],[],[]
-                    )
-        # Returns a tuple of lists:  (Links, KeyWords, KeyEvents)
-        links_keywords_keyevents = Spider.en.filter.extract_data(content_divs, Spider.en.anchor)
+            # Still extract metadata and links even if no content divs found
+            import bs4 # Fancy import
+            soup = bs4.BeautifulSoup(html_input, 'html.parser')
+            content_divs = [soup] 
 
-        return links_keywords_keyevents
+        # Returns a tuple: (Links, KeyWords, KeyEvents, Metadata)
+        # Passing html_input as raw_html for metadata extraction
+        links_keywords_keyevents_meta = Spider.en.filter.extract_data(content_divs, Spider.en.anchor, raw_html=html_input)
+
+        return links_keywords_keyevents_meta
 
 
     @staticmethod
     def request_work(spider_num : str):
-        HTML = Spider.en.schedule_a_spider(spider_num)
-        return HTML
+        data = Spider.en.schedule_a_spider(spider_num)
+        return data

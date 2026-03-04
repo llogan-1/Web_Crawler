@@ -9,20 +9,21 @@ class Scheduler:
         # Init necessary tables
         self._init_db()
 
-    # Fetch the next schedulable item (URL) from the database
+    # Fetch the next schedulable item (URL and its source) from the database
     def assign_item_to_spider(self, spider_id: str):
         with self.lock, self.db_conn:
             cursor = self.db_conn.cursor()
-            cursor.execute('SELECT id, url FROM tasks ORDER BY id LIMIT 1')
+            # Fetch both url and source_url
+            cursor.execute('SELECT id, url, source_url FROM tasks ORDER BY id LIMIT 1')
             task = cursor.fetchone()
 
             if task:
-                task_id, url = task
+                task_id, url, source_url = task
                 self.spider_assignments[spider_id] = url
                 cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
-                return str(url)
+                return (str(url), str(source_url) if source_url else None)
             else:
-                return None
+                return (None, None)
 
     def is_empty(self):
         with self.lock:
@@ -40,11 +41,11 @@ class Scheduler:
             cursor.close()
             return size
 
-    def register_schedulable(self, url: str):
-        """Register a new task (URL) to the scheduler."""
+    def register_schedulable(self, url: str, source_url: str = None):
+        """Register a new task (URL and its source) to the scheduler."""
         with self.lock:
             cursor = self.db_conn.cursor()
-            cursor.execute('INSERT INTO tasks (url) VALUES (?)', (url,))
+            cursor.execute('INSERT INTO tasks (url, source_url) VALUES (?, ?)', (url, source_url))
             self.db_conn.commit()
             cursor.close()
 
@@ -62,7 +63,8 @@ class Scheduler:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS tasks (
                     id INTEGER PRIMARY KEY,
-                    url TEXT NOT NULL
+                    url TEXT NOT NULL,
+                    source_url TEXT
                 )
             ''')
             self.db_conn.commit()
