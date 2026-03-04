@@ -8,6 +8,7 @@ import sqlite3
 import time
 import os
 import json
+from datetime import datetime
 
 class Engine:
 
@@ -28,12 +29,18 @@ class Engine:
         # Timer
         self.time_max = time.time() + (mins * 60) # add mins minutes
         
-        # Ensure data directory exists
-        os.makedirs("data", exist_ok=True)
+        # Create unique folder for this crawl session
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.data_dir = os.path.join("data", f"crawl_{timestamp}")
+        os.makedirs(self.data_dir, exist_ok=True)
         
+        # Database connection paths
+        self.scheduler_db_path = os.path.join(self.data_dir, "scheduler.db")
+        self.crawled_db_path = os.path.join(self.data_dir, "crawled.db")
+
         # Database connection
-        self.scheduler_conn = sqlite3.connect("data/scheduler.db", check_same_thread=False)
-        self.crawler_conn = sqlite3.connect("data/crawled.db", check_same_thread=False)
+        self.scheduler_conn = sqlite3.connect(self.scheduler_db_path, check_same_thread=False)
+        self.crawler_conn = sqlite3.connect(self.crawled_db_path, check_same_thread=False)
 
         # Define scheduler
         self.scheduler = Scheduler(self.scheduler_conn)
@@ -51,6 +58,7 @@ class Engine:
         # Starting spider)s_
         main_spider = Spider(self)
         for i in range(self.thread_number):
+            # Spider now uses self.data_dir for its database connections
             thread = Thread(target=main_spider.run, args=("thread_" + str(i), self.anchor,))
             self.threads.append(thread)
             thread.daemon = True # Spider can be daemon since run_spiders keeps program running indefinetly 
