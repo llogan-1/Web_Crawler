@@ -1,5 +1,6 @@
 from .scheduler import Scheduler
 from ..utils.html_fetch import HTMLFetcher
+from ..utils.robots_checker import RobotsChecker
 from .spider import Spider
 from threading import Thread
 from threading import Lock
@@ -10,13 +11,19 @@ import json
 
 class Engine:
 
-    def __init__(self, website_info, mins, filter, thread_number):
+    DEFAULT_USER_AGENT = 'MyPersonalPortfolioBot/1.0 (https://github.com/llogan-1/Web_Crawler; contact@example.com) Mozilla/5.0 (compatible; MyBot/1.0)'
+
+    def __init__(self, website_info, mins, filter, thread_number, user_agent=None):
         self._instance = self
         self.anchor = website_info[1]
         self.lock = Lock()
         self.filter = filter
         self.threads = []
         self.thread_number = thread_number
+        self.user_agent = user_agent if user_agent else self.DEFAULT_USER_AGENT
+
+        # Robots.txt checker
+        self.robots_checker = RobotsChecker(user_agent=self.user_agent)
 
         # Timer
         self.time_max = time.time() + (mins * 60) # add mins minutes
@@ -56,8 +63,21 @@ class Engine:
     def schedule_a_spider(self, thread_num : str):
         url_data = self.scheduler.assign_item_to_spider(thread_num)
         url, source_url = url_data
+        
         if url:
-            html_cookies = HTMLFetcher.fetch_html(url)
+            # Check robots.txt before fetching
+            if not self.robots_checker.is_allowed(url):
+                print(f"URL disallowed by robots.txt: {url}")
+                return (None, url, source_url, None) # Still return URL so it can be handled or skipped
+            
+            # Check and apply crawl-delay
+            delay = self.robots_checker.get_crawl_delay(url)
+            if delay:
+                # Basic implementation: simple sleep
+                time.sleep(delay)
+
+            # Pass the user agent to fetch_html
+            html_cookies = HTMLFetcher.fetch_html(url, user_agent=self.user_agent)
             html, cookies = html_cookies
             return (html, url, source_url, cookies)
         return (None, None, None, None)
