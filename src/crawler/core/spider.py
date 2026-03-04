@@ -26,14 +26,19 @@ class Spider:
             if time.time() >= Spider.en.time_max:
                 break
 
-            print(spider_num+'\n')
             WebData = Spider.request_work(spider_num) # request string of HTML text
             HTML = WebData[0]
             url = WebData[1]
 
+            if not url:
+                # No tasks available, wait a bit
+                time.sleep(1)
+                continue
+
             if not HTML or Spider.en.already_crawled(url, crawler_conn):
                 continue
             
+            print(f"{spider_num} processing: {url}")
             data = Spider.crawl(self, HTML, anchor)
             with self.lock:
                 Spider.en.export_scraped(data, url, scheduler_conn, crawler_conn)

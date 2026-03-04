@@ -22,7 +22,7 @@ class Scheduler:
                 cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
                 return str(url)
             else:
-                raise ValueError("No tasks available to assign to the spider.")
+                return None
 
     def is_empty(self):
         with self.lock:

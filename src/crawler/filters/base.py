@@ -1,139 +1,189 @@
+from urllib.parse import urljoin
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk import pos_tag
 from collections import Counter
 from bs4 import BeautifulSoup
 
+# Global stop words for filtering
 stop_words = set(stopwords.words("english"))
-common_tags = [
-    "content",        # Main content section
-    "main",           # Primary content wrapper
-    "footer",         # Footer content
-    "sidebar",        # Side navigation or additional info
-    "container",      # General-purpose container
-    "nav",            # Navigation menu
-    "article",        # Article content
-    "blog",           # Blog post content
-    "comments",       # User comments section
-    "products",       # Product listings in e-commerce
-    "post",           # Blog post or forum entry
-    "description",    # Description of content or products
-    "details",        # Content details or metadata
-    "body-content",   # Main body content
-    "summary",        # Summarized information
-    "content-wrapper", # Wrapper for primary content
-    "search-results", # Search results page
-    "hero",           # Hero section at the top of the page
-    "profile",        # User profile data
-    "contact-info",   # Contact information
-    "title",          # Page or post title
+
+# Common identifiers for content areas across different website architectures
+COMMON_IDENTIFIERS = [
+    "content", "main", "article", "post", "container", "body-content", 
+    "content-wrapper", "main-content", "entry-content", "post-content"
 ]
 
+# Semantic tags that usually contain the primary content of a page
+SEMANTIC_TAGS = ["main", "article", "section"]
+
+# Noise tags to be removed before text analysis
+NOISE_TAGS = ["script", "style", "nav", "footer", "header", "aside", "form"]
 
 class BaseFilter:
     
     def __init__(self):
         pass
 
-    # Assume HTML is not empty and in proper HTML format.
-    # If no relevant divs, returns empty list to be flagged.
     @staticmethod
-    def get_divs(HTML):
-        soup = BeautifulSoup(HTML, 'html.parser')
-        
-        content_divs = []
-        for div in common_tags:
-            content_divs.append(soup.find('div', id=div))
+    def get_divs(html):
+        """
+        Extract relevant content containers from the HTML.
+        Looks for semantic tags first, then falls back to common IDs and classes.
+        """
+        if not html:
+            return []
+            
+        soup = BeautifulSoup(html, 'html.parser')
+        content_containers = []
 
-        return content_divs
+        # 1. Search for semantic tags
+        for tag_name in SEMANTIC_TAGS:
+            found_tags = soup.find_all(tag_name)
+            for tag in found_tags:
+                if tag not in content_containers:
+                    content_containers.append(tag)
+
+        # 2. Search for common IDs and classes if we haven't found much
+        if len(content_containers) < 1:
+            for identifier in COMMON_IDENTIFIERS:
+                # Search by ID
+                tag_by_id = soup.find(id=identifier)
+                if tag_by_id and tag_by_id not in content_containers:
+                    content_containers.append(tag_by_id)
+                
+                # Search by Class
+                tags_by_class = soup.find_all(class_=identifier)
+                for tag in tags_by_class:
+                    if tag not in content_containers:
+                        content_containers.append(tag)
+
+        # 3. Fallback to body if nothing specific was found
+        if not content_containers and soup.body:
+            content_containers.append(soup.body)
+
+        return content_containers
     
     def get_keywords_and_events(self, text):
+        """
+        Extract the most common keywords (nouns) and events (past-tense verbs) from text.
+        """
         try:
-            if not BaseFilter.is_utf8_valid(text):
-                print("Invalid UTF-8 text, skipping...")
+            if not text or not BaseFilter.is_utf8_valid(text):
                 return ([], [])
 
             # Preprocess the text
             preprocessed_text = BaseFilter.preprocess_text_nltk(text)
             words = word_tokenize(preprocessed_text)
             
-            # Remove stopwords
-            filtered_words = [word for word in words if word.lower() not in stop_words]
+            # Remove stopwords and non-alphabetic tokens
+            filtered_words = [word for word in words if word.lower() not in stop_words and word.isalpha()]
             
+            if not filtered_words:
+                return ([], [])
+
             # Extract POS tags
             pos_tags = pos_tag(filtered_words)
             
-            # Extract keywords (nouns and proper nouns)
-            all_keywords = [word for word, tag in pos_tags if tag in {"NN", "NNP"}]
-            keywords = Counter(all_keywords).most_common(3)
+            # Extract keywords (nouns: NN, NNP, NNS, NNPS)
+            all_keywords = [word for word, tag in pos_tags if tag.startswith("NN")]
+            keywords = Counter(all_keywords).most_common(5)
             
-            # Extract events (verbs in past tense)
+            # Extract events (verbs in past tense: VBD, VBN)
             all_events = [word for word, tag in pos_tags if tag in {"VBD", "VBN"}]
-            events = Counter(all_events).most_common(2)
+            events = Counter(all_events).most_common(3)
             
             return (keywords, events)
         except Exception as e:
-            # Log the exception (optional) and return empty lists
-            print(f"Error processing text: {e}")
+            print(f"Error processing text for keywords/events: {e}")
             return ([], [])
 
-    # Returns a tuple of lists:  (Links, KeyWords, KeyEvents)
-    def extract_data(self, content_divs, anchor):
-        content = self.get_div_text(content_divs)
+    def extract_data(self, content_containers, anchor):
+        """
+        High-level method to extract links, keywords, and events from identified containers.
+        """
+        if not content_containers:
+            return ([], [], [])
 
-        links = self.get_content_links(content, anchor)
-        keywords_keyevents = self.get_keywords_and_events(content)
-
-        return (links, keywords_keyevents[0], keywords_keyevents[1])
-    
-    
-    def get_content_links(self, content, anchor):
-        links = []
-
-        soup = BeautifulSoup(content, 'html.parser')
+        # Extract clean text from all containers
+        combined_text = self.get_div_text(content_containers)
         
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            if href.startswith(anchor):
-                links.append(href)
-            if BaseFilter.is_relative_link(href):
-                links.append(anchor + href)
+        # Extract links from all containers (better than extracting from combined text)
+        links = self.get_content_links_from_containers(content_containers, anchor)
+        
+        # Extract keywords and events from the cleaned text
+        keywords, events = self.get_keywords_and_events(combined_text)
 
-        return links
+        return (links, keywords, events)
+    
+    def get_content_links_from_containers(self, containers, anchor):
+        """
+        Extract unique, valid links from the provided list of BS4 tag objects.
+        """
+        unique_links = set()
+        for container in containers:
+            for a in container.find_all('a', href=True):
+                href = a['href'].strip()
+                if not href or href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
+                    continue
+                
+                # Resolve relative URLs
+                full_url = urljoin(anchor, href)
+                
+                # Filter by anchor (domain-specific crawling)
+                if full_url.startswith(anchor):
+                    unique_links.add(full_url)
 
+        return list(unique_links)
 
-    # Accept a list of divs in the form of a string, and return the paragraph text
-    def get_div_text(self, divs : str):
-        content_text = ""
-        for div in divs:
-            content_text += str(div)
-        return content_text
+    def get_div_text(self, containers):
+        """
+        Extract and clean text content from a list of BS4 tag objects.
+        Removes noise like scripts, styles, and navigation.
+        """
+        cleaned_text_parts = []
+        
+        for container in containers:
+            # Create a copy to avoid modifying the original soup if used elsewhere
+            # Though here get_divs usually provides fresh objects
+            import copy
+            container_copy = copy.copy(container)
+            
+            # Remove noise tags
+            for noise_tag in container_copy.find_all(NOISE_TAGS):
+                noise_tag.decompose()
+            
+            # Extract text with a space separator to prevent word merging
+            text = container_copy.get_text(separator=' ', strip=True)
+            if text:
+                cleaned_text_parts.append(text)
 
-    # Function to check if a link is relative
+        return " ".join(cleaned_text_parts)
+
     @staticmethod
     def is_relative_link(link):
+        """Check if a link is relative."""
         return not (link.startswith('http://') or link.startswith('https://') or link.startswith('www.'))
-
 
     @staticmethod
     def is_utf8_valid(text):
         """Check if a string is valid UTF-8."""
         try:
-            text.encode("utf-8")
+            if isinstance(text, bytes):
+                text.decode("utf-8")
+            else:
+                text.encode("utf-8")
             return True
-        except UnicodeEncodeError:
+        except (UnicodeEncodeError, UnicodeDecodeError):
             return False
         
     @staticmethod
     def preprocess_text_nltk(text):
-        cleaned_text = (
-            text.replace("\n", " ")  # Normalize text
-            .replace("(", " ")
-            .replace(")", " ")
-            .replace("[", " ")
-            .replace("]", " ")
-            .replace(",", " ")
-            .replace(";", " ")
-        )
-        return cleaned_text
-    
+        """Normalize text by removing common punctuation and special characters."""
+        # More robust cleaning
+        import re
+        # Replace non-alphanumeric characters (except spaces) with spaces
+        cleaned = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)
+        # Collapse multiple spaces
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        return cleaned.strip()

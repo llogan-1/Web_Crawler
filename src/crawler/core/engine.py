@@ -54,7 +54,9 @@ class Engine:
         
     def schedule_a_spider(self, thread_num : str):
         url = self.scheduler.assign_item_to_spider(thread_num)
-        return (HTMLFetcher.fetch_html(url), url)
+        if url:
+            return (HTMLFetcher.fetch_html(url), url)
+        return (None, None)
     
     def export_scraped(self, data, url, scheduler_conn, crawler_conn):
         print("Exporting scraped data...")
