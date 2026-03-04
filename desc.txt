@@ -1,5 +1,0 @@
-Designed and implemented a multithreaded data acquisition system to collect and structure large volumes of domain-specific web data for downstream analysis.
-• Built automated parsing and transformation pipelines using BeautifulSoup to convert unstructured HTML into structured datasets and metadata.
-• Engineered a relational storage schema in SQLite to support efficient querying, analysis, and data integrity.
-• Implemented concurrency control, request throttling, and fault handling to ensure scalable and reliable data collection.
-• Architected the system for extensibility across multiple data domains, enabling high-throughput structured data ingestion (>13,000 pages/hour).
