@@ -2,11 +2,11 @@ import unittest
 import sys
 import os
 
-# Add the parent directory to the sys.path to allow imports from the main project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add src to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from Filters.base_f import BaseFilter
-from Filters.wikipedia_f import WikipediaFilter
+from crawler.filters.base import BaseFilter
+from crawler.filters.wikipedia import WikipediaFilter
 from bs4 import BeautifulSoup
 
 class TestBaseFilter(unittest.TestCase):

@@ -3,10 +3,10 @@ import sqlite3
 import sys
 import os
 
-# Add the parent directory to the sys.path to allow imports from the main project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add src to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from scheduler import Scheduler
+from crawler.core.scheduler import Scheduler
 
 class TestScheduler(unittest.TestCase):
 

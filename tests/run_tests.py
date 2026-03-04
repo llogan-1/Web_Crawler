@@ -2,7 +2,6 @@ import unittest
 import os
 import sys
 
-# Add the parent directory to the sys.path to allow imports from the main project
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def run_all_tests():

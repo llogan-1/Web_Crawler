@@ -10,15 +10,37 @@ A flexible, multithreaded web crawler designed for efficient data extraction fro
 - **Data Persistence**: Stores extracted data in a structured SQLite database.
 - **Configurable Filters**: Apply custom filters to limit search depth, file types, or content patterns.
 
+## Usage
+
+The project now features a dynamic entry point `main.py` in the root directory. You can also use `scripts/run.py` which acts as a wrapper.
+
+```bash
+python main.py --help
+```
+
+Options:
+- `--start-url`: The initial URL to start crawling from (default: Wikipedia Main Page).
+- `--base-url`: The base URL/anchor for filtering links (default: https://en.wikipedia.org).
+- `--mins`: Duration of the crawling process in minutes (default: 1).
+- `--threads`: Number of crawler threads (default: 2).
+- `--filter`: The type of filter to use (`wikipedia` or `base`).
+
+### Example
+To crawl Wikipedia for 5 minutes with 4 threads:
+```bash
+python main.py --mins 5 --threads 4
+```
+
 ## Project Structure
 
-- **`run.py`**: Main entry point to initialize and control the crawling process.
-- **`spider.py`**: Core class handling individual page requests and content extraction.
-- **`scheduler.py`**: Manages task distribution and rate-limiting to optimize performance.
-- **`html_fetch.py`**: Handles HTTP requests and basic error handling.
-- **`engine.py`**: Coordinates crawlers and manages high-level operations.
-- **`Filters/`**: Contains logic to filter links and content based on user-defined criteria.
-- **`DataBases/`**: Stores SQLite databases for easy data querying.
+- **`main.py`**: Dynamic entry point with CLI arguments.
+- **`src/crawler/core/`**: Core logic including `engine.py`, `spider.py`, and `scheduler.py`.
+- **`src/crawler/filters/`**: Filtering logic (e.g., `wikipedia.py`, `base.py`).
+- **`src/crawler/database/`**: Database management logic.
+- **`src/crawler/utils/`**: Utility functions like `html_fetch.py`.
+- **`scripts/`**: Shortcut scripts like `run.py`.
+- **`tests/`**: Unit tests for the various components.
+- **`data/`**: Directory where SQLite databases are stored.
 
 ## Installation
 

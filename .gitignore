@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Databases
+DataBases/*.db
+!DataBases/.gitkeep
+
+# NLTK Data (if stored locally)
+nltk_data/
+
+# IDEs
+.vscode/
+.idea/
+*.swp

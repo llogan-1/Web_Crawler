@@ -5,16 +5,16 @@ import os
 import sqlite3
 import time
 
-# Add the parent directory to the sys.path to allow imports from the main project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add src to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from engine import Engine
+from crawler.core.engine import Engine
 
 class TestEngine(unittest.TestCase):
 
-    @patch('engine.sqlite3')
-    @patch('engine.Spider')
-    @patch('engine.Thread')
+    @patch('crawler.core.engine.sqlite3')
+    @patch('crawler.core.engine.Spider')
+    @patch('crawler.core.engine.Thread')
     def setUp(self, mock_thread, mock_spider, mock_sqlite):
         self.mock_filter = MagicMock()
         self.website_info = ("http://example.com", "http://example.com")

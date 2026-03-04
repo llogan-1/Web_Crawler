@@ -2,12 +2,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 import sys
 import os
-import sqlite3
 
-# Add the parent directory to the sys.path to allow imports from the main project
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add src to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from spider import Spider
+from crawler.core.spider import Spider
 
 class TestSpider(unittest.TestCase):
 
