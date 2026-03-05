@@ -23,7 +23,7 @@ class Engine:
         self.thread_number = thread_number
         self.user_agent = user_agent if user_agent else self.DEFAULT_USER_AGENT
 
-        # Robots.txt checker
+        # Robots.txt checker 
         self.robots_checker = RobotsChecker(user_agent=self.user_agent)
 
         # Timer

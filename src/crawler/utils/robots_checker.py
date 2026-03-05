@@ -2,6 +2,7 @@ import urllib.robotparser
 from urllib.parse import urlparse
 import time
 from threading import Lock
+import requests
 
 class RobotsChecker:
     def __init__(self, user_agent='*'):
@@ -15,41 +16,43 @@ class RobotsChecker:
         domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
         
         with self.lock:
-            if domain not in self.parsers:
-                parser = urllib.robotparser.RobotFileParser()
-                parser.set_url(f"{domain}/robots.txt")
+            if domain not in self.parsers or (time.time() - self.last_fetch_time.get(domain, 0) > 3600):
+                robots_url = f"{domain}/robots.txt"
+                parser = urllib.robotparser.RobotFileParser(url=robots_url)  # ← added
+                
+                headers = {
+                    'User-Agent': self.user_agent,
+                    'Accept': 'text/plain, */*'
+                }
+                
                 try:
-                    parser.read()
-                    self.parsers[domain] = parser
-                    self.last_fetch_time[domain] = time.time()
+                    response = requests.get(robots_url, headers=headers, timeout=10)
+                    code = response.status_code
+                    
+                    if code == 200:
+                        parser.parse(response.text.splitlines())
+                    elif code in (401, 403):
+                        parser.parse(["User-agent: *", "Disallow: /"])
+                        print(f"403/401 → treating as Disallow All: {domain}")
+                    
                 except Exception as e:
-                    print(f"Error reading robots.txt for {domain}: {e}")
-                    # If we can't read it, we'll assume everything is allowed but log it
-                    # Alternatively, create a parser that allows nothing if you want to be very safe
-                    return None
+                    print(f"Error fetching robots.txt {robots_url}: {e}")
+                    # Optionally: parser.parse(["Disallow: /"]) here too
+                
+                self.parsers[domain] = parser
+                self.last_fetch_time[domain] = time.time()
             
-            # Optional: Refresh robots.txt if it's older than 1 hour
-            elif time.time() - self.last_fetch_time.get(domain, 0) > 3600:
-                 try:
-                    self.parsers[domain].read()
-                    self.last_fetch_time[domain] = time.time()
-                 except:
-                    pass
-
             return self.parsers[domain]
 
     def is_allowed(self, url):
+        """Check if the given URL is allowed to be crawled according to robots.txt."""
         parser = self._get_parser(url)
-        if not parser:
-            return True # If no robots.txt found, assume everything is allowed
-        
+        # can_fetch expects user_agent and url
         return parser.can_fetch(self.user_agent, url)
 
     def get_crawl_delay(self, url):
+        """Get the crawl delay for the given URL, if specified."""
         parser = self._get_parser(url)
-        if not parser:
-            return None
-        
         try:
             delay = parser.crawl_delay(self.user_agent)
             return delay
