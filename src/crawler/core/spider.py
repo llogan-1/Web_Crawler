@@ -15,12 +15,9 @@ class Spider:
 
     def run(self, spider_num, anchor):
 
-        # Ensure data directory exists
-        os.makedirs("data", exist_ok=True)
-
-        # Create new connections for each thread
-        scheduler_conn = sqlite3.connect("data/scheduler.db")
-        crawler_conn = sqlite3.connect("data/crawled.db")
+        # Create new connections for each thread using the paths from the engine
+        scheduler_conn = sqlite3.connect(Spider.en.scheduler_db_path)
+        crawler_conn = sqlite3.connect(Spider.en.crawled_db_path)
 
         while True:
             if time.time() >= Spider.en.time_max:
@@ -37,7 +34,16 @@ class Spider:
                 time.sleep(1)
                 continue
 
-            if not HTML or Spider.en.already_crawled(url, crawler_conn):
+            # If HTML is None but url exists, it might be disallowed by robots.txt or failed fetch
+            if not HTML:
+                # We should still mark it as "already crawled" (or "already checked") to avoid re-crawling
+                # Insert empty metadata so it's recorded as skipped
+                with self.lock:
+                    Spider.en.export_scraped(([], [], [], {"date": "disallowed/failed", "author": None, "description": None}), 
+                                            url, source_url, cookies, scheduler_conn, crawler_conn)
+                continue
+
+            if Spider.en.already_crawled(url, crawler_conn):
                 continue
             
             print(f"{spider_num} processing: {url} (from {source_url})")
@@ -54,7 +60,7 @@ class Spider:
         content_divs = Spider.en.filter.get_divs(html_input)
         if not content_divs:
             # Still extract metadata and links even if no content divs found
-            import bs4 # Fancy import
+            import bs4
             soup = bs4.BeautifulSoup(html_input, 'html.parser')
             content_divs = [soup] 
 
@@ -67,5 +73,6 @@ class Spider:
 
     @staticmethod
     def request_work(spider_num : str):
+        # Now returns (html, url, source_url, cookies)
         data = Spider.en.schedule_a_spider(spider_num)
         return data
