@@ -36,7 +36,7 @@ def check_db_contents(db_path, table_name):
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
 
-def url_check(data, wiki, i):
+def url_check(data, i):
     for d in data:
         print(d[i])
 
@@ -44,8 +44,6 @@ def url_check(data, wiki, i):
 # Paths to your databases
 crawled_db_path = "DataBases/crawled.db"
 scheduler_db_path = "DataBases/scheduler.db"
-
-wiki = "https://en.wikipedia.org/"
 
 # Table names in the databases
 crawled_table = "crawled"  # Replace with the actual table name in your crawled DB
