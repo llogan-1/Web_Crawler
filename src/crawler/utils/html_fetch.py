@@ -5,11 +5,27 @@ import requests
 sys.stdout.reconfigure(encoding='utf-8')
 
 class HTMLFetcher:
+    """
+    Utility class for fetching HTML content from the web.
+    """
     def __init__(self):
+        """
+        Initialize the HTMLFetcher.
+        """
         pass
 
     @staticmethod
     def fetch_html(url: str, user_agent: str = None):
+        """
+        Fetch HTML content and cookies from a given URL.
+
+        Args:
+            url (str): The URL to fetch.
+            user_agent (str, optional): Custom User-Agent string to use.
+
+        Returns:
+            tuple: (html_content, cookies) if successful, otherwise (None, None).
+        """
         # Default user agent if none provided
         ua = user_agent if user_agent else 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
         

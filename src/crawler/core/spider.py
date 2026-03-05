@@ -4,16 +4,37 @@ import time
 import os
 
 class Spider:
+    """
+    Worker class responsible for crawling individual web pages.
+    
+    Spiders request tasks from the Engine, fetch HTML content, 
+    extract data using filters, and report results back to the Engine.
+    """
 
     en = None
 
     def __init__(self, engine):
+        """
+        Initialize the Spider with a reference to the Engine.
+
+        Args:
+            engine (Engine): The central orchestration engine.
+        """
         
         self.url = ''
         self.lock = Lock()
         Spider.en = engine
 
     def run(self, spider_num, anchor):
+        """
+        The main loop for the spider thread.
+        
+        Continuously requests work from the engine until the crawl time expires.
+
+        Args:
+            spider_num (str): Identifier for this spider thread.
+            anchor (str): The base URL anchor for link filtering.
+        """
 
         # Create new connections for each thread using the paths from the engine
         scheduler_conn = sqlite3.connect(Spider.en.scheduler_db_path)
@@ -55,6 +76,16 @@ class Spider:
         crawler_conn.close()
 
     def crawl(self, html_input : str, anchor : str):
+        """
+        Extract data from the provided HTML content.
+
+        Args:
+            html_input (str): The raw HTML content of the page.
+            anchor (str): The base URL anchor for filtering.
+
+        Returns:
+            tuple: (links, keywords, keyevents, metadata) extracted from the page.
+        """
 
         # Collect divs to analyze
         content_divs = Spider.en.filter.get_divs(html_input)
@@ -73,6 +104,15 @@ class Spider:
 
     @staticmethod
     def request_work(spider_num : str):
+        """
+        Request a new crawling task from the Engine.
+
+        Args:
+            spider_num (str): Identifier for the requesting spider.
+
+        Returns:
+            tuple: (html, url, source_url, cookies) for the next task.
+        """
         # Now returns (html, url, source_url, cookies)
         data = Spider.en.schedule_a_spider(spider_num)
         return data

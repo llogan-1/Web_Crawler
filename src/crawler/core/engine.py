@@ -11,10 +11,26 @@ import json
 from datetime import datetime
 
 class Engine:
+    """
+    The central orchestration engine for the web crawler.
+    
+    Manages threads, database connections, the scheduler, and coordinates
+    the crawling process between spiders and storage.
+    """
 
     DEFAULT_USER_AGENT = 'MyPersonalPortfolioBot/1.0 (https://github.com/llogan-1/Web_Crawler; contact@example.com) Mozilla/5.0 (compatible; MyBot/1.0)'
 
     def __init__(self, website_info, mins, filter, thread_number, user_agent=None):
+        """
+        Initialize the Engine with crawling parameters.
+
+        Args:
+            website_info (tuple): A tuple containing (start_url, base_url).
+            mins (float): Maximum duration for the crawl in minutes.
+            filter (BaseFilter): The filter instance to use for data extraction.
+            thread_number (int): Number of worker threads to spawn.
+            user_agent (str, optional): Custom User-Agent string. Defaults to DEFAULT_USER_AGENT.
+        """
         self._instance = self
         self.anchor = website_info[1]
         self.lock = Lock()
@@ -54,8 +70,11 @@ class Engine:
         self.boot()
 
     def boot(self): # self is engine
+        """
+        Start the crawling process by spawning and managing spider threads.
+        """
         
-        # Starting spider)s_
+        # Starting spiders
         main_spider = Spider(self)
         for i in range(self.thread_number):
             # Spider now uses self.data_dir for its database connections
@@ -69,6 +88,15 @@ class Engine:
 
         
     def schedule_a_spider(self, thread_num : str):
+        """
+        Assign a URL to a spider and fetch its content if allowed.
+
+        Args:
+            thread_num (str): Identifier for the requesting thread.
+
+        Returns:
+            tuple: (html, url, source_url, cookies) if successful, otherwise (None, ...).
+        """
         url_data = self.scheduler.assign_item_to_spider(thread_num)
         url, source_url = url_data
         
@@ -91,6 +119,17 @@ class Engine:
         return (None, None, None, None)
     
     def export_scraped(self, data, url, source_url, cookies, scheduler_conn, crawler_conn):
+        """
+        Export crawled data to the scheduler and results databases.
+
+        Args:
+            data (tuple): Scraped data (links, keywords, keyevents, metadata).
+            url (str): The URL of the crawled page.
+            source_url (str): The URL that linked to the crawled page.
+            cookies (dict): Cookies received from the page.
+            scheduler_conn: SQLite connection to the scheduler database.
+            crawler_conn: SQLite connection to the crawled results database.
+        """
         print(f"Exporting scraped data for {url}...")
         # Unpackage data: (links, keywords, keyevents, metadata)
         links = data[0]
@@ -156,6 +195,16 @@ class Engine:
 
     @staticmethod
     def already_crawled(url : str, crawler_conn):
+        """
+        Check if a URL has already been processed and stored in the database.
+
+        Args:
+            url (str): The URL to check.
+            crawler_conn: SQLite connection to the crawled results database.
+
+        Returns:
+            bool: True if the URL exists in the database, False otherwise.
+        """
         try:
             cursor = crawler_conn.cursor()
 
@@ -173,6 +222,9 @@ class Engine:
             return False
 
     def _init_crawler_db(self):
+        """
+        Initialize the database schema for storing crawled results.
+        """
         cursor = self.crawler_conn.cursor()
 
         # URLs table updated with new columns

@@ -8,6 +8,11 @@ USER_AGENT = 'MyPersonalPortfolioBot/1.0 (WebCrawler;) Mozilla/5.0 (compatible; 
 
 # Ensure NLTK data is available
 def setup_nltk():
+    """
+    Download necessary NLTK datasets if they are not already present.
+    
+    Includes tokenizers, stop words, and part-of-speech taggers.
+    """
     try:
         nltk.data.find('tokenizers/punkt')
     except LookupError:
@@ -46,6 +51,11 @@ except ImportError as e:
     sys.exit(1)
 
 def main():
+    """
+    Entry point for the Web Crawler CLI.
+    
+    Parses command-line arguments, initializes filters, and starts the Engine.
+    """
     parser = argparse.ArgumentParser(description="Web Crawler Entry Point")
     parser.add_argument("--start-url", type=str, default="https://en.wikipedia.org/wiki/Main_Page",
                         help="The initial URL to start crawling from.")

@@ -22,12 +22,30 @@ SEMANTIC_TAGS = ["main", "article", "section"]
 NOISE_TAGS = ["script", "style", "nav", "footer", "header", "aside", "form"]
 
 class BaseFilter:
+    """
+    The base class for all content filters.
+    
+    Provides common logic for extracting content, links, metadata, and 
+    keywords from HTML. Can be subclassed for site-specific logic.
+    """
     
     def __init__(self):
+        """
+        Initialize the BaseFilter.
+        """
         pass
 
     @staticmethod
     def get_divs(html):
+        """
+        Identify and extract the main content containers from HTML.
+
+        Args:
+            html (str): Raw HTML content.
+
+        Returns:
+            list: A list of BeautifulSoup tag objects representing content containers.
+        """
         if not html:
             return []
             
@@ -55,7 +73,15 @@ class BaseFilter:
         return content_containers
 
     def extract_metadata(self, html):
-        """Extract publication date, author, and description from HTML."""
+        """
+        Extract publication date, author, and description from HTML metadata tags.
+
+        Args:
+            html (str): Raw HTML content.
+
+        Returns:
+            dict: A dictionary containing 'date', 'author', and 'description'.
+        """
         if not html:
             return {"date": None, "author": None, "description": None}
             
@@ -96,6 +122,15 @@ class BaseFilter:
         return metadata
 
     def get_keywords_and_events(self, text):
+        """
+        Process text to extract significant keywords (nouns) and events (verbs).
+
+        Args:
+            text (str): Cleaned text content from a page.
+
+        Returns:
+            tuple: (keywords, events) where each is a list of (word, count) tuples.
+        """
         try:
             if not text or not BaseFilter.is_utf8_valid(text):
                 return ([], [])
@@ -120,8 +155,15 @@ class BaseFilter:
 
     def extract_data(self, content_containers, anchor, raw_html=None):
         """
-        Extract links, keywords, events, and metadata.
-        Now also accepts raw_html for metadata extraction.
+        High-level method to extract all required data from content containers.
+
+        Args:
+            content_containers (list): List of BeautifulSoup tag objects.
+            anchor (str): Base URL for resolving relative links.
+            raw_html (str, optional): The original raw HTML for metadata extraction.
+
+        Returns:
+            tuple: (links, keywords, events, metadata)
         """
         if not content_containers:
             return ([], [], [], {"date": None, "author": None, "description": None})
@@ -135,6 +177,16 @@ class BaseFilter:
         return (links, keywords, events, metadata)
     
     def get_content_links_from_containers(self, containers, anchor):
+        """
+        Extract and resolve all internal links from the provided containers.
+
+        Args:
+            containers (list): List of BeautifulSoup tag objects.
+            anchor (str): Base URL to ensure links remain within the target site.
+
+        Returns:
+            list: A list of absolute URLs.
+        """
         unique_links = set()
         for container in containers:
             for a in container.find_all('a', href=True):
@@ -147,6 +199,15 @@ class BaseFilter:
         return list(unique_links)
 
     def get_div_text(self, containers):
+        """
+        Extract and clean text content from the provided containers.
+
+        Args:
+            containers (list): List of BeautifulSoup tag objects.
+
+        Returns:
+            str: Combined and cleaned text.
+        """
         cleaned_text_parts = []
         import copy
         for container in containers:
@@ -160,10 +221,28 @@ class BaseFilter:
 
     @staticmethod
     def is_relative_link(link):
+        """
+        Check if a link is relative.
+
+        Args:
+            link (str): The URL/path to check.
+
+        Returns:
+            bool: True if relative, False otherwise.
+        """
         return not (link.startswith('http://') or link.startswith('https://') or link.startswith('www.'))
 
     @staticmethod
     def is_utf8_valid(text):
+        """
+        Validate if the text can be encoded/decoded as UTF-8.
+
+        Args:
+            text (str or bytes): The text to validate.
+
+        Returns:
+            bool: True if valid UTF-8, False otherwise.
+        """
         try:
             if isinstance(text, bytes):
                 text.decode("utf-8")
@@ -175,6 +254,15 @@ class BaseFilter:
         
     @staticmethod
     def preprocess_text_nltk(text):
+        """
+        Clean text for NLTK processing by removing non-alphanumeric characters.
+
+        Args:
+            text (str): Raw text.
+
+        Returns:
+            str: Cleaned text.
+        """
         import re
         cleaned = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)
         cleaned = re.sub(r'\s+', ' ', cleaned)

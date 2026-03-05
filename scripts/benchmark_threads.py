@@ -12,7 +12,17 @@ MAIN_PY = os.path.join(PROJECT_ROOT, 'main.py')
 DATA_ROOT = os.path.join(PROJECT_ROOT, 'data')
 
 def run_crawl(threads, mins=0.5, url="https://en.wikipedia.org/wiki/Main_Page"):
-    """Runs the crawler with a specific number of threads and returns pages per second."""
+    """
+    Run the crawler with a specific thread count and measure throughput.
+
+    Args:
+        threads (int): The number of threads to use.
+        mins (float): Duration of the test crawl in minutes.
+        url (str): The starting URL for the test.
+
+    Returns:
+        float: The number of pages scraped per second.
+    """
     print(f"\n--- Testing with {threads} threads ---")
     
     start_time = time.time()
@@ -61,6 +71,11 @@ def run_crawl(threads, mins=0.5, url="https://en.wikipedia.org/wiki/Main_Page"):
     return pps
 
 def main():
+    """
+    Perform a multi-threaded performance benchmark and plot the results.
+    
+    Tests various thread counts and saves a performance graph to the scripts directory.
+    """
     # Thread counts to try
     #thread_counts = [1, 2, 4, 8, 16, 24, 32]
     #thread_counts = [32, 48, 64, 72, 92]

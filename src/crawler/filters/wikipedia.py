@@ -4,11 +4,30 @@ import re
 from bs4 import BeautifulSoup
 
 class WikipediaFilter(BaseFilter):
+    """
+    A specialized filter for extracting data from Wikipedia.
+    
+    Overrides methods to target Wikipedia-specific HTML structures 
+    like 'mw-content-text' and internal wiki links.
+    """
 
     def __init__(self):
+        """
+        Initialize the WikipediaFilter.
+        """
         super().__init__()
 
     def get_content_links(self, content_container, anchor):
+        """
+        Extract valid internal Wikipedia links from the content container.
+
+        Args:
+            content_container: BeautifulSoup tag object.
+            anchor (str): Base URL for resolving links.
+
+        Returns:
+            list: A list of absolute Wikipedia URLs.
+        """
         if not content_container:
             return []
 
@@ -29,6 +48,14 @@ class WikipediaFilter(BaseFilter):
     def extract_data(self, content_containers, anchor, raw_html=None):
         """
         Extract links, keywords, events, and metadata specifically for Wikipedia pages.
+
+        Args:
+            content_containers (list): List of BeautifulSoup tag objects.
+            anchor (str): Base URL for link resolution.
+            raw_html (str, optional): The original raw HTML.
+
+        Returns:
+            tuple: (links, keywords, events, metadata)
         """
         if not content_containers:
             return ([], [], [], {"date": None, "author": None, "description": None})
@@ -46,6 +73,15 @@ class WikipediaFilter(BaseFilter):
     
     @staticmethod
     def get_div_ptext(container):
+        """
+        Extract text content exclusively from paragraph tags within a container.
+
+        Args:
+            container: BeautifulSoup tag object.
+
+        Returns:
+            str: Combined paragraph text.
+        """
         if not container:
             return ""
             
@@ -55,6 +91,15 @@ class WikipediaFilter(BaseFilter):
 
     @staticmethod
     def get_divs(html):
+        """
+        Locate the main Wikipedia content div ('mw-content-text').
+
+        Args:
+            html (str): Raw HTML content.
+
+        Returns:
+            list: A list containing the main content div as a BeautifulSoup tag.
+        """
         if not html:
             return []
             

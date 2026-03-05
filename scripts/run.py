@@ -8,5 +8,9 @@ sys.path.append(root_path)
 # Import the main function from the root main.py
 from main import main
 
+"""
+A convenience script to run the web crawler from within the scripts directory.
+"""
+
 if __name__ == "__main__":
     main()

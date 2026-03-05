@@ -5,13 +5,33 @@ from threading import Lock
 import requests
 
 class RobotsChecker:
+    """
+    Handles robots.txt parsing and compliance for different domains.
+    
+    Ensures the crawler respects 'Disallow' rules and 'Crawl-delay' directives.
+    """
     def __init__(self, user_agent='*'):
+        """
+        Initialize the RobotsChecker.
+
+        Args:
+            user_agent (str): The User-Agent string used for compliance checks.
+        """
         self.user_agent = user_agent
         self.parsers = {}  # domain -> RobotFileParser
         self.lock = Lock()
         self.last_fetch_time = {} # domain -> last time robots.txt was fetched
 
     def _get_parser(self, url):
+        """
+        Retrieve or create a RobotFileParser for a given URL's domain.
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            urllib.robotparser.RobotFileParser: The parser for the domain.
+        """
         parsed_url = urlparse(url)
         domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
         
@@ -45,13 +65,29 @@ class RobotsChecker:
             return self.parsers[domain]
 
     def is_allowed(self, url):
-        """Check if the given URL is allowed to be crawled according to robots.txt."""
+        """
+        Check if the given URL is allowed to be crawled according to robots.txt.
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            bool: True if allowed, False otherwise.
+        """
         parser = self._get_parser(url)
         # can_fetch expects user_agent and url
         return parser.can_fetch(self.user_agent, url)
 
     def get_crawl_delay(self, url):
-        """Get the crawl delay for the given URL, if specified."""
+        """
+        Get the crawl delay for the given URL's domain, if specified in robots.txt.
+
+        Args:
+            url (str): The URL to check.
+
+        Returns:
+            float or None: The delay in seconds, or None if not specified.
+        """
         parser = self._get_parser(url)
         try:
             delay = parser.crawl_delay(self.user_agent)
