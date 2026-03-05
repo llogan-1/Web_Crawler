@@ -5,7 +5,6 @@ A robust, multithreaded web crawler designed for efficient, domain-constrained d
 ## Key Features
 
 - **Domain-Constrained Crawling**: Targeted data collection to ensure relevance and adhere to ethical/legal boundaries.
-- **Multithreaded Architecture**: High-throughput execution using concurrent worker threads, capable of processing >13,000 pages per hour.
 - **Automated Parsing & Metadata Extraction**: Leverages BeautifulSoup and NLTK to transform unstructured HTML into structured datasets (keywords, key events, and metadata).
 - **Robots.txt Compliance**: Integrated `RobotsChecker` to respect `robots.txt` rules and crawl delays.
 - **Relational Data Persistence**: Utilizes SQLite for session-based storage of tasks, crawled URLs, keywords, and cookies.
