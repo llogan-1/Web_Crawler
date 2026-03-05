@@ -15,7 +15,8 @@ class TestEngine(unittest.TestCase):
     @patch('crawler.core.engine.sqlite3')
     @patch('crawler.core.engine.Spider')
     @patch('crawler.core.engine.Thread')
-    def setUp(self, mock_thread, mock_spider, mock_sqlite):
+    @patch('crawler.core.engine.os.makedirs')
+    def setUp(self, mock_makedirs, mock_thread, mock_spider, mock_sqlite):
         self.mock_filter = MagicMock()
         self.website_info = ("http://example.com", "http://example.com")
         
@@ -26,8 +27,11 @@ class TestEngine(unittest.TestCase):
         # Avoid booting real threads
         with patch.object(Engine, 'boot', return_value=None):
             self.engine = Engine(self.website_info, 1, self.mock_filter, 1)
+            # Override paths and connections for testing
             self.engine.scheduler_conn = self.mock_conn
             self.engine.crawler_conn = self.mock_conn
+            self.engine.scheduler_db_path = ":memory:"
+            self.engine.crawled_db_path = ":memory:"
 
     def test_init_crawler_db(self):
         cursor = self.mock_conn.cursor()

@@ -13,11 +13,14 @@ class TestSpider(unittest.TestCase):
     def setUp(self):
         self.mock_engine = MagicMock()
         self.mock_engine.time_max = 10**12 # Far in the future
+        self.mock_engine.scheduler_db_path = ":memory:"
+        self.mock_engine.crawled_db_path = ":memory:"
         self.spider = Spider(self.mock_engine)
 
     def test_crawl(self):
         # Mock engine filter
         self.mock_engine.filter.get_divs.return_value = ["<div>content</div>"]
+        # Now returns 4 elements: links, keywords, keyevents, metadata
         self.mock_engine.filter.extract_data.return_value = (["http://link.com"], [("key", 1)], [("event", 1)], {"date": "today"})
         self.mock_engine.anchor = "http://anchor.com"
 
@@ -30,7 +33,7 @@ class TestSpider(unittest.TestCase):
         self.assertEqual(result[3], {"date": "today"})
 
     def test_request_work(self):
-        # Returns 4 elements: html, url, source_url, cookies
+        # Now returns 4 elements: html, url, source_url, cookies
         self.mock_engine.schedule_a_spider.return_value = ("<html></html>", "http://url.com", "http://source.com", {"c": "v"})
         result = Spider.request_work("thread_1")
         self.assertEqual(result, ("<html></html>", "http://url.com", "http://source.com", {"c": "v"}))
