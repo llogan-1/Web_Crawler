@@ -17,8 +17,7 @@ class Engine:
     Manages threads, database connections, the scheduler, and coordinates
     the crawling process between spiders and storage.
     """
-
-    DEFAULT_USER_AGENT = 'MyPersonalPortfolioBot/1.0 (https://github.com/llogan-1/Web_Crawler; contact@example.com) Mozilla/5.0 (compatible; MyBot/1.0)'
+    DEFAULT_USER_AGENT = 'MyPersonalPortfolioBot/1.0 (WebCrawler;) Mozilla/5.0 (compatible; MyBot/1.0)'
 
     def __init__(self, website_info, mins, filter, thread_number, user_agent=None):
         """
@@ -74,7 +73,7 @@ class Engine:
         Start the crawling process by spawning and managing spider threads.
         """
         
-        # Starting spiders
+        # Starting spider)s
         main_spider = Spider(self)
         for i in range(self.thread_number):
             # Spider now uses self.data_dir for its database connections
